@@ -497,13 +497,20 @@ function processVoiceCommand(transcript) {
     } else if (transcript.includes("help")) {
       commandRecognized = true;
 
-      // Replace with your actual PDF URL (make sure it's viewable to everyone)
-      const pdfUrl = "https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/edit?usp=sharing";
+      const pdfUrl =
+        "https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/view?usp=sharing";
 
-      // Open the PDF in a new tab
-      window.open(pdfUrl, "_blank");
-
-      responseMessage = "Opening the help document for you.";
+      try {
+        const newWindow = window.open(pdfUrl, "_blank");
+        if (!newWindow) {
+          responseMessage = "Please allow pop-ups for this site and try again.";
+        } else {
+          responseMessage = "Opening the help document for you.";
+        }
+      } catch (error) {
+        responseMessage =
+          "Could not open the help document. Please check your browser settings.";
+      }
     }
 
     // ========== WEATHER COMMANDS ==========
