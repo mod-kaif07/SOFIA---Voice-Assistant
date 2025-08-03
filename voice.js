@@ -1,798 +1,1100 @@
-const start_btn = document.querySelector("#start");
-const stop_btn = document.querySelector("#stop");
-const speak_btn = document.querySelector("#speak");
-const location_btn = document.querySelector(".loc");
-const message_print = document.querySelector(".message_print");
-const message_nexa = document.querySelector(".nexavoice");
-const alering_message = document.querySelector(".alrting");
-const animate = document.querySelector(".googleassist");
-const battry_display = document.querySelector(".battery");
-const holemessage = document.querySelector("hole_message");
+// ==============================================
+// SOFIA VOICE ASSISTANT - BEGINNER FRIENDLY VERSION
+// Created by: Mohammad Kaif (Fixed & Improved)
+// Description: A voice assistant that can respond to various commands
+// ==============================================
 
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+// ==================== GLOBAL VARIABLES ====================
+// These variables can be used anywhere in our code
 
-const recognition = new SpeechRecognition();
-let userData;
-// Nexa start
-recognition.onstart = function () {
-  alering_message.innerHTML = ` SOFIA  is activated`;
-  alering_message.style.color = "red";
-  console.log("NEXA is activated");
-};
-let batteryPromise = navigator.getBattery().then(batteryCallback);
+let recognition; // This will hold our speech recognition object
+let isListening = false; // Track if we're currently listening to user
+let userData = null; // Store user's personal information
+let globalWeatherData = null; // Store weather information
 
-function batteryCallback(batteryObject) {
-  setInterval(() => {
-    printBatteryStatus(batteryObject);
-  }, 1000); // Set an interval time in milliseconds (e.g., 1000ms = 1 second)
-}
+// ==================== DOM ELEMENTS ====================
+// Get all the HTML elements we need to work with
+// We'll get these when the page loads to avoid errors
 
-function printBatteryStatus(battery) {
-  let batteryLevel = Math.floor(battery.level * 100); // Converts to integer
-  // console.log("Battery level: " + batteryLevel + "%");
+let elements = {};
 
-  battry_display.innerHTML = `${batteryLevel}% ${
-    battery.charging ? "⚡️" : ""
-  }`;
+// ==================== APP INITIALIZATION ====================
+// This runs when the webpage loads
 
-  // console.log("Charging: " + battery.charging);
-}
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("🚀 Starting SOFIA Voice Assistant...");
 
-let onlineDisplay = document.querySelector(".online");
-function checkOnlineStatus() {
-  if (navigator.onLine) {
-    onlineDisplay.innerHTML = "Online🚀";
-    // readOut("You're online.");
-    onlineDisplay.style.color = "limegreen";
-  } else {
-    onlineDisplay.innerHTML = "Offline📴";
-    readOut("Oops! You're offline.");
-    onlineDisplay.style.color = "tomato";
-  }
-}
+  // Get all DOM elements after page loads
+  initializeElements();
 
-checkOnlineStatus();
-window.addEventListener("online", checkOnlineStatus);
-window.addEventListener("offline", checkOnlineStatus);
+  // Start the app
+  initializeApp();
+});
 
-// Function to fetch weather data
-function weather(location) {
-  const weatherCont = document.querySelector(".temp").querySelectorAll("*");
-  let url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=48ddfe8c9cf29f95b7d0e54d6e171008`;
+function initializeElements() {
+  console.log("🔍 Finding HTML elements...");
 
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", url, true);
-  xhr.onload = function () {
-    if (this.status === 200) {
-      let data = JSON.parse(this.responseText);
-      globalWeatherData = data; // Store weather data globally
-      weatherCont[0].textContent = `Location: ${data.name}`;
-      weatherCont[1].textContent = `Country: ${data.sys.country}`;
-      weatherCont[2].textContent = `Weather Type: ${data.weather[0].main}`;
-      weatherCont[3].textContent = `Description: ${data.weather[0].description}`;
-      weatherCont[4].textContent = `Original Temp: ${ktc(data.main.temp)}`;
-      weatherCont[5].textContent = `Feels-Like: ${ktc(data.main.feels_like)}`;
-      weatherCont[6].textContent = `Min Temp: ${ktc(data.main.temp_min)}`;
-      weatherCont[7].textContent = `Max Temp: ${ktc(data.main.temp_max)}`;
-      // weatherCont[4].src = `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-      weatherStatement = `Sir, the weather in ${data.name} is ${
-        data.weather[0].description
-      }, and the temperature feels like ${ktc(data.main.feels_like)}°C.`;
-    } else {
-      weatherCont[0].textContent = "Weather Info Not Found";
-      globalWeatherData = null; // Reset global weather data if fetch fails
-    }
-  };
-  xhr.send();
-}
+  // Get all elements and store them safely
+  elements = {
+    // Loading and main screens
+    loadingScreen: document.getElementById("loading-screen"),
+    mainApp: document.getElementById("main-app"),
+    setupModal: document.getElementById("setup-modal"),
+    overlay: document.getElementById("overlay"),
 
-// convert kelvin to celcius
-function ktc(k) {
-  k = k - 273.15;
-  return k.toFixed(2);
-}
+    // Control buttons
+    startBtn: document.getElementById("start-btn"),
+    stopBtn: document.getElementById("stop-btn"),
+    speakBtn: document.getElementById("speak-btn"),
+    clearDataBtn: document.getElementById("clear-data-btn"),
+    clearMessagesBtn: document.getElementById("clear-messages-btn"),
 
-// Check if jarvis_setup data exists in localStorage
-if (localStorage.getItem("jarvis_setup") !== null) {
-  const savedSetup = JSON.parse(localStorage.getItem("jarvis_setup"));
-  weather(savedSetup.location); // Call the weather function with saved location
-}
+    // Display areas
+    timeDisplay: document.getElementById("time-display"),
+    dateDisplay: document.getElementById("date-display"),
+    batteryLevel: document.getElementById("battery-level"),
+    statusIndicator: document.getElementById("status-indicator"),
+    connectionStatus: document.getElementById("connection-status"),
+    statusMessage: document.getElementById("status-message"),
+    userMessage: document.getElementById("user-message"),
+    assistantMessage: document.getElementById("assistant-message"),
+    assistantStatus: document.getElementById("assistant-status"),
 
-const setupDiv = document.querySelector(".jarvi_setup_in_middle");
-setupDiv.style.display = "none";
+    // Weather display elements
+    location: document.getElementById("location"),
+    country: document.getElementById("country"),
+    weatherMain: document.getElementById("weather-main"),
+    weatherDescription: document.getElementById("weather-description"),
+    temperature: document.getElementById("temperature"),
+    feelsLike: document.getElementById("feels-like"),
+    minMaxTemp: document.getElementById("min-max-temp"),
 
-// If no jarvis_setup in localStorage, show setup form
-if (localStorage.getItem("jarvis_setup") === null) {
-  setupDiv.style.display = "block";
+    // System status elements
+    voiceStatus: document.getElementById("voice-status"),
+    speechStatus: document.getElementById("speech-status"),
+    apiStatus: document.getElementById("api-status"),
 
-  // Add event listener to the submit button
-  setupDiv.querySelector("button").addEventListener("click", userinfo);
-}
-
-function userinfo() {
-  const inputs = setupDiv.querySelectorAll("input");
-
-  // Collect user input data
-  const setupInfo = {
-    name: inputs[0].value.trim(),
-    location: inputs[1].value.trim(),
-    github: inputs[2].value.trim(),
-    linkedin: inputs[3].value.trim(),
+    // Form elements
+    setupForm: document.getElementById("setup-form"),
+    userName: document.getElementById("user-name"),
+    userLocation: document.getElementById("user-location"),
+    userGithub: document.getElementById("user-github"),
+    userLinkedin: document.getElementById("user-linkedin"),
   };
 
-  // Check if any field is empty
-  const testArr = Array.from(inputs).map((input) => input.value.trim());
-  if (testArr.includes("")) {
-    readOut("Please fill all the details");
-    alert("Please fill all the details");
-  } else {
-    // Save data to localStorage
-    localStorage.clear();
-    localStorage.setItem("jarvis_setup", JSON.stringify(setupInfo));
+  console.log("✅ Elements initialized");
+}
 
-    // Hide setup form and call weather function
-    setupDiv.style.display = "none";
-    weather(setupInfo.location);
+function initializeApp() {
+  console.log("📋 Initializing application...");
+
+  // Show loading screen for 2 seconds
+  setTimeout(() => {
+    try {
+      // Hide loading screen and show main app
+      if (elements.loadingScreen)
+        elements.loadingScreen.classList.add("hidden");
+      if (elements.mainApp) elements.mainApp.classList.remove("hidden");
+
+      // Start all the important functions
+      checkUserSetup();
+      initializeSpeechRecognition();
+      initializeEventListeners();
+      updateDateTime();
+      checkBattery();
+      checkOnlineStatus();
+
+      // Say welcome message
+      speakWelcomeMessage();
+
+      console.log("✅ App initialized successfully!");
+    } catch (error) {
+      console.error("❌ Error during initialization:", error);
+      showError("Failed to initialize app. Please refresh the page.");
+    }
+  }, 2000);
+}
+
+// ==================== EVENT LISTENERS ====================
+// Set up all button clicks and form submissions
+
+function initializeEventListeners() {
+  console.log("🎯 Setting up event listeners...");
+
+  try {
+    // Control buttons
+    if (elements.startBtn) {
+      elements.startBtn.addEventListener("click", startListening);
+    }
+
+    if (elements.stopBtn) {
+      elements.stopBtn.addEventListener("click", stopListening);
+    }
+
+    if (elements.speakBtn) {
+      elements.speakBtn.addEventListener("click", testSpeech);
+    }
+
+    if (elements.clearDataBtn) {
+      elements.clearDataBtn.addEventListener("click", clearAllData);
+    }
+
+    if (elements.clearMessagesBtn) {
+      elements.clearMessagesBtn.addEventListener("click", clearMessages);
+    }
+
+    // Setup form
+    if (elements.setupForm) {
+      elements.setupForm.addEventListener("submit", handleSetupSubmit);
+    }
+
+    console.log("✅ Event listeners set up successfully");
+  } catch (error) {
+    console.error("❌ Error setting up event listeners:", error);
   }
 }
 
-// Function for text-to-speech
-function readOut(text) {
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-US"; // Set language for speech synthesis
-  window.speechSynthesis.speak(speech);
+// ==================== USER SETUP FUNCTIONS ====================
+
+function checkUserSetup() {
+  console.log("👤 Checking user setup...");
+
+  try {
+    // Try to get saved user data from browser storage
+    const savedData = localStorage.getItem("sofia_user_data");
+
+    if (savedData) {
+      userData = JSON.parse(savedData);
+      console.log("✅ User data found:", userData.name);
+
+      // Get weather for user's location
+      getWeatherData(userData.location);
+
+      // Update status
+      updateAssistantStatus(`Welcome back, ${userData.name}!`);
+    } else {
+      console.log("❌ No user data found, showing setup...");
+      showSetupModal();
+    }
+  } catch (error) {
+    console.error("❌ Error checking user setup:", error);
+    showSetupModal(); // Show setup if there's any error
+  }
 }
 
-// Nexa result
-let transcript = " ";
-recognition.onresult = function (event) {
-  let current = event.resultIndex;
-  transcript = event.results[current][0].transcript;
+function showSetupModal() {
+  console.log("📝 Showing setup modal...");
 
-  // Normalize input: remove extra spaces and convert to lowercase
-  transcript = transcript.trim().toLowerCase();
-  message_print.innerHTML = `MY words:- ${transcript}`;
-  message_print.style.color = "#FFD700";
-  console.log(`MY words : ${transcript}`);
-
-  let iscommandsreconize = false;
-
-  // Command Handlers
-  if (transcript.includes("hello")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Hello, sir! I am SOFIA, How can I assist you?`;
-    readOut("Hello, sir! I am SOFIA, How can I assist you?");
+  try {
+    if (elements.setupModal) elements.setupModal.classList.remove("hidden");
+    if (elements.overlay) elements.overlay.classList.remove("hidden");
+    // if (elements.mainApp) elements.mainApp.classList.add('blur');
+  } catch (error) {
+    console.error("❌ Error showing setup modal:", error);
   }
-  if (transcript.includes("my name")) {
-    iscommandsreconize = true;
-    let storedData = localStorage.getItem("jarvis_setup"); // Get the stored JSON string
-    userData = storedData ? JSON.parse(storedData) : null; // Parse it into an object
+}
 
-    if (userData && userData.name) {
-      message_nexa.innerHTML = `SOFIA voice:- Hello ${userData.name}, nice to meet you`;
-      readOut(`Hello ${userData.name}, nice to meet you`);
-    } else {
-      message_nexa.innerHTML = `SOFIA voice:- Local Storage is Empty`;
-      readOut(`Local Storage is Empty`);
-    }
+function hideSetupModal() {
+  console.log("✅ Hiding setup modal...");
+
+  try {
+    if (elements.setupModal) elements.setupModal.classList.add("hidden");
+    if (elements.overlay) elements.overlay.classList.add("hidden");
+    if (elements.mainApp) elements.mainApp.classList.remove("blur");
+  } catch (error) {
+    console.error("❌ Error hiding setup modal:", error);
   }
+}
 
-  if (transcript.includes("your name")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- My name is SOFIA `;
-    readOut("My name is SOFIA");
-  }
+function handleSetupSubmit(event) {
+  event.preventDefault(); // Prevent form from refreshing page
 
-  if (transcript.includes("open chat gpt")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Opening ChatGPT, sir`;
-    readOut("Opening ChatGPT, sir");
-    window.open("https://chat.openai.com/");
-  }
+  console.log("💾 Handling setup form submission...");
 
-  if (transcript.includes("created you")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Mohammad Kaif`;
-    readOut("Mohammad Kaif");
-  }
+  try {
+    // Get values from form inputs
+    const name = elements.userName.value.trim();
+    const location = elements.userLocation.value.trim();
+    const github = elements.userGithub.value.trim();
+    const linkedin = elements.userLinkedin.value.trim();
 
-  if (transcript.includes("programming language used")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- "I am built in JavaScript, using Speech Recognition and Speech Synthesis API. HTML and CSS are used to style my user interface, and I fetch weather information from the OpenWeatherMap API.".`;
-    readOut(
-      "I am built in JavaScript, using Speech Recognition and Speech Synthesis API. HTML and CSS are used to style my user interface, and I fetch weather information from the OpenWeatherMap API."
-    );
-  }
-
-  if (transcript.includes("saif") || transcript.includes("safe")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- saaif you have to work hard and get into the IIT , so work hard , stay focused`;
-    readOut(
-      "saaif you have to work hard and get into the IIT , so work hard , stay focused"
-    );
-  }
-
-  if (transcript.includes("open youtube")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Opening YouTube, sir`;
-    readOut("Opening YouTube, sir");
-    window.open("https://www.youtube.com/");
-  }
-
-  if (transcript.includes("open amazon")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Opening amazon, sir`;
-    readOut("Opening Amazon, sir");
-    window.open("https://www.amazon.in/");
-  }
-
-  if (transcript.includes("open wikipedia")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- Sure, sir! Let me fetch the information for you on Wikipedia.`;
-    readOut("Sure, sir! Let me fetch the information for you on Wikipedia.");
-
-    // Extract the topic after "open wikipedia"
-    let searchQuery = transcript.replace("open wikipedia", "").trim(); // Remove the trigger phrase
-    if (searchQuery) {
-      let wikiUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(
-        searchQuery
-      )}`; // Encode the query for a valid URL
-      window.open(wikiUrl, "_blank"); // Open the Wikipedia page in a new tab
-    } else {
-      readOut("Please specify what you want to search on Wikipedia.");
-      message_nexa.innerHTML = `SOFIA voice :- Please specify what you want to search on Wikipedia.`;
-    }
-  }
-
-  if (transcript.includes("open flipkart")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the filpkart`;
-    readOut("Opening Flipkart, sir");
-    window.open("https://www.flipkart.com/");
-  }
-  if (transcript.includes("your command")) {
-    iscommandsreconize = true;
-
-    message_nexa.innerHTML = `📜 SOFIA voice :- Opening the command PDF...`;
-    readOut("Opening Command PDF, sir.");
-
-    // Open the command guide in a new tab
-    window.open(
-      "https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/edit?usp=sharing",
-      "_blank"
-    );
-  }
-
-  if (transcript.includes("open google")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the Google`;
-    readOut("Opening Google, sir");
-    window.open("https://www.google.com/");
-  }
-
-  if (
-    transcript.includes("firebase") ||
-    transcript.includes("open fire base")
-  ) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the firebase`;
-    readOut("Opening Firebase, sir");
-    window.open("https://firebase.google.com/");
-  }
-
-  if (transcript.includes("open gmail")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the gmail`;
-    readOut("Opening Gmail, sir");
-    window.open("https://workspace.google.com/");
-  }
-
-  if (transcript.includes("open linkedin")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the Linkdin`;
-    readOut("Opening LinkedIn, sir");
-    window.open("https://in.linkedin.com/");
-  }
-  if (transcript.includes("open github")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening the github`;
-    readOut("Opening Github, sir");
-    window.open("https://github.com/");
-  }
-
-  if (transcript.includes("open my linkedin")) {
-    iscommandsreconize = true;
-    message_nexa.innerHTML = `SOFIA voice :- opening your linkedin account`;
-    readOut("Opening your personal account, sir");
-    window.open("https://www.linkedin.com/in/mohammad-kaif-9a0bb6284/");
-  }
-
-  if (transcript.toLowerCase().includes("search for")) {
-    iscommandsreconize = true;
-    // Extract the search query after "search for"
-    let input = transcript.toLowerCase().replace("search for", "").trim(); // Remove "search for" and trim spaces
-
-    if (input.length === 0) {
-      readOut("Please provide a valid search query.");
-      return; // Stop if there's no valid search query
+    // Check if required fields are filled
+    if (!name || !location) {
+      const errorMsg = "Please fill in your name and location.";
+      alert(errorMsg);
+      readOut(errorMsg);
+      return;
     }
 
-    message_nexa.innerHTML = `SOFIA voice :- Here are the ${input} results`;
-    readOut(`Here are the ${input} results`);
-
-    // Replace spaces with "+" for the Google search URL
-    input = encodeURIComponent(input); // Safely encode any special characters or spaces
-
-    console.log(input); // Debugging: See the processed query
-
-    // Redirect to Google with the search query
-    window.open(`https://www.google.com/search?q=${input}`, "_blank");
-  }
-
-  if (
-    transcript.toLowerCase().includes("play song") ||
-    transcript.toLowerCase().includes(" nath ")
-  ) {
-    iscommandsreconize = true;
-    // Remove "play" and "youtube" (case-insensitive) from the transcript
-    let videoQuery = transcript.replace(/(play|youtube)/gi, "").trim();
-
-    // Check if the query is valid (not empty)
-    if (videoQuery.length > 0) {
-      // Notify the user
-      message_nexa.innerHTML = `SOFIA voice :- Searching and playing ${videoQuery} on YouTube.`;
-      readOut(`Searching and playing ${videoQuery} on YouTube.`);
-
-      // Use "search_query" to find videos and automatically open the first one with autoplay enabled
-      window.open(
-        `https://www.youtube.com/results?search_query=${encodeURIComponent(
-          videoQuery
-        )}&autoplay=1`,
-        "_blank"
-      );
-    } else {
-      // Prompt the user if the query is empty
-      readOut(
-        "I didn't catch that. Please specify what you want to play on YouTube."
-      );
-      message_nexa.innerHTML = `SOFIA voice :- I didn't catch that. Please specify what you want to play on YouTube.`;
-    }
-  }
-
-  if (
-    transcript.includes("what's the time") ||
-    transcript.includes("tell me the time") ||
-    transcript.includes("current time")
-  ) {
-    iscommandsreconize = true;
-    let timespeak = new Date().toLocaleTimeString();
-    message_nexa.innerHTML = `SOFIA voice :- The time is ${timespeak}`;
-    readOut(`The time is  ${timespeak}`);
-  }
-
-  if (
-    transcript.includes("what's the date") ||
-    transcript.includes("tell me the date") ||
-    transcript.includes("today date") ||
-    transcript.includes("current date")
-  ) {
-    iscommandsreconize = true;
-    let datespeak = new Date().toDateString();
-    message_nexa.innerHTML = `SOFIA voice :- The Date is ${datespeak}`;
-    readOut(`The Date  is  ${datespeak}`);
-  }
-
-  // Update the "weather today" command logic
-  if (transcript.includes("weather today") || transcript.includes("weather")) {
-    iscommandsreconize = true;
-    if (globalWeatherData && globalWeatherData.name) {
-      const tempCelsius = (globalWeatherData.main.feels_like - 273.15).toFixed(
-        2
-      );
-      readOut(
-        `Today's weather in ${globalWeatherData.name}: ${globalWeatherData.weather[0].description}, feels like ${tempCelsius}°C, with humidity at ${globalWeatherData.main.humidity}%.`
-      );
-      message_nexa.innerHTML = `SOFIA voice :- Today's weather in ${globalWeatherData.name}: ${globalWeatherData.weather[0].description}, feels like ${tempCelsius}°C, with humidity at ${globalWeatherData.main.humidity}%.`;
-    } else {
-      readOut(
-        " Sorry, I cannot fetch the weather data at the moment. Please try again."
-      );
-      message_nexa.innerHTML =
-        "SOFIA voice :- Sorry, I cannot fetch the weather data at the moment. Please try again.";
-    }
-  }
-  if (transcript.includes("meaning of")) {
-    iscommandsreconize = true;
-    let wordArray = transcript.split(" ");
-
-    let index = wordArray.indexOf("meaning");
-    if (index !== -1 && index + 1 < wordArray.length) {
-      let specificTask = wordArray[index + 2];
-
-      console.log("Specific Task:", specificTask);
-
-      fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${specificTask}`)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.length > 0) {
-            let definition = data[0].meanings[0].definitions[0].definition;
-
-            message_print.innerHTML = `MY WORDS: ${data[0].word}`;
-            readOut(definition);
-            message_nexa.innerHTML = `SOFIA voice: ${definition}`;
-          } else {
-            throw new Error("Word not found");
-          }
-        })
-        .catch((error) => {
-          readOut("Sorry, could not fetch the data");
-          message_nexa.innerHTML = `
-                    <h3>Sorry, could not fetch the data</h3>
-                    <div class="error-bg"></div>
-                    <img src="errorimage.png" alt="Error Image" class="error-img">
-                `;
-        });
-    } else {
-      console.log("No word found after 'meaning'");
-    }
-  }
-  if (transcript.includes("joke")) {
-    iscommandsreconize = true;
-
-    const URL = "https://official-joke-api.appspot.com/random_joke";
-
-    const getnewjoke = async () => {
-      try {
-        let response = await fetch(URL);
-        let jsonresponse = await response.json();
-        let messagejoke = `${jsonresponse.setup} ${jsonresponse.punchline}`;
-
-        message_nexa.innerHTML = `SOFIA voice: ${messagejoke}`;
-        readOut(messagejoke);
-
-        // Add a short delay before laughing (so it happens *after* joke)
-        setTimeout(() => {
-          const laugh = " Haha Haha  , that was funny!";
-          message_nexa.innerHTML += `<br/>SOFIA laughs: ${laugh}`;
-          readOut(laugh);
-        }, 2500); // 2.5 seconds delay (adjust if needed)
-      } catch (error) {
-        console.error("Failed to fetch joke:", error);
-        message_nexa.innerHTML =
-          "SOFIA voice: Sorry, I couldn't get a joke right now.";
-      }
+    // Create user data object
+    userData = {
+      name: name,
+      location: location,
+      github: github,
+      linkedin: linkedin,
+      setupDate: new Date().toISOString(),
     };
 
-    getnewjoke();
+    // Save to browser storage
+    localStorage.setItem("sofia_user_data", JSON.stringify(userData));
+
+    // Hide setup form and get weather
+    hideSetupModal();
+    getWeatherData(location);
+
+    // Welcome the user
+    const welcomeMessage = `Welcome ${name}! Your profile has been set up successfully.`;
+    updateAssistantMessage(welcomeMessage);
+    updateAssistantStatus(welcomeMessage);
+    readOut(welcomeMessage);
+
+    console.log("✅ User data saved successfully!");
+  } catch (error) {
+    console.error("❌ Error saving user data:", error);
+    showError("Failed to save user data. Please try again.");
   }
+}
 
-  if (
-    transcript.includes("my location") ||
-    transcript.includes("where am i") ||
-    transcript.includes("current location")
-  ) {
-    iscommandsreconize = true;
+// ==================== SPEECH RECOGNITION SETUP ====================
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async function (position) {
-          // ✅ Make function async
-          // Extracting latitude and longitude
-          const latitude = position.coords.latitude.toFixed(2);
-          const longitude = position.coords.longitude.toFixed(2);
+function initializeSpeechRecognition() {
+  console.log("🎤 Setting up speech recognition...");
 
-          // ✅ Use API key correctly
-          const locationApiKey = "5a01b967555b40fc880113649251703";
-          const url = `http://api.weatherapi.com/v1/current.json?key=${locationApiKey}&q=${latitude},${longitude}&aqi=no`;
-
-          try {
-            const response = await fetch(url); // ✅ Await fetch correctly
-            const data = await response.json();
-
-            console.log("Location Data:", data);
-
-            // ✅ Display location details
-            const locationMessage = `Your location: ${data.location.name}, ${data.location.region}, ${data.location.country}.`;
-            message_nexa.innerHTML = `SOFIA voice :- ${locationMessage}`;
-            readOut(locationMessage);
-
-            // ✅ Open in Google Maps
-            const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-            window.open(googleMapsUrl, "_blank");
-            readOut("Redirecting to your location in Google Maps.");
-          } catch (error) {
-            console.error("Error fetching location:", error);
-            readOut("Sorry, I couldn't retrieve your location details.");
-          }
-        },
-        function (error) {
-          // ✅ Handle geolocation errors
-          let errorMessage;
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = "You denied the request for Geolocation.";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = "Location information is unavailable.";
-              break;
-            case error.TIMEOUT:
-              errorMessage = "The request to get your location timed out.";
-              break;
-            default:
-              errorMessage = "An unknown error occurred.";
-              break;
-          }
-
-          message_nexa.innerHTML = `SOFIA voice :- ${errorMessage}`;
-          readOut(errorMessage);
-        }
-      );
-    } else {
-      message_nexa.innerHTML =
-        "SOFIA voice :- Geolocation is not supported by this browser.";
-      readOut("Geolocation is not supported by this browser.");
+  try {
+    // Check if browser supports speech recognition
+    if (
+      !("webkitSpeechRecognition" in window) &&
+      !("SpeechRecognition" in window)
+    ) {
+      console.error("❌ Speech recognition not supported");
+      updateStatusMessage("Speech recognition not supported", "error");
+      updateSystemStatus("voice-status", "Not Supported", "error");
+      return;
     }
+
+    // Create speech recognition object
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+
+    // Configure speech recognition settings
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    // Set up event handlers
+    recognition.onstart = handleRecognitionStart;
+    recognition.onresult = handleRecognitionResult;
+    recognition.onend = handleRecognitionEnd;
+    recognition.onerror = handleRecognitionError;
+
+    updateSystemStatus("voice-status", "Ready", "success");
+    console.log("✅ Speech recognition setup complete!");
+  } catch (error) {
+    console.error("❌ Error setting up speech recognition:", error);
+    updateSystemStatus("voice-status", "Error", "error");
+  }
+}
+
+function handleRecognitionStart() {
+  console.log("🎤 Speech recognition started");
+  isListening = true;
+  updateStatusMessage("Listening...", "active");
+  updateSystemStatus("voice-status", "Listening", "active");
+  document.body.classList.add("listening");
+
+  // Disable start button, enable stop button
+  if (elements.startBtn) elements.startBtn.disabled = true;
+  if (elements.stopBtn) elements.stopBtn.disabled = false;
+}
+
+function handleRecognitionResult(event) {
+  try {
+    // Get what the user said
+    const transcript = event.results[0][0].transcript.toLowerCase().trim();
+    console.log("👤 User said:", transcript);
+
+    // Show what user said on screen
+    updateUserMessage(`"${transcript}"`);
+
+    // Process the voice command
+    processVoiceCommand(transcript);
+  } catch (error) {
+    console.error("❌ Error processing speech result:", error);
+    showError("Error processing your speech. Please try again.");
+  }
+}
+
+function handleRecognitionEnd() {
+  console.log("🎤 Speech recognition ended");
+  isListening = false;
+  updateStatusMessage("Ready", "");
+  updateSystemStatus("voice-status", "Ready", "success");
+  document.body.classList.remove("listening");
+
+  // Re-enable start button
+  if (elements.startBtn) elements.startBtn.disabled = false;
+  if (elements.stopBtn) elements.stopBtn.disabled = true;
+}
+
+function handleRecognitionError(event) {
+  console.error("❌ Speech recognition error:", event.error);
+  isListening = false;
+  updateStatusMessage(`Error: ${event.error}`, "error");
+  updateSystemStatus("voice-status", "Error", "error");
+  document.body.classList.remove("listening");
+
+  // Re-enable start button
+  if (elements.startBtn) elements.startBtn.disabled = false;
+  if (elements.stopBtn) elements.stopBtn.disabled = true;
+}
+
+// ==================== CONTROL FUNCTIONS ====================
+
+function startListening() {
+  console.log("▶️ Starting to listen...");
+
+  if (!recognition) {
+    showError("Speech recognition not available");
+    return;
   }
 
-  //here for calculation
-  if (transcript.includes("add") || transcript.includes("plus")) {
-    iscommandsreconize = true;
-    let operation = transcript.split(" "); // Split the transcript into words
-    let specificTask = operation[0]; // Extract the first word as the specific task
-
-    // Extract the numbers part (everything after "add")
-    let numbersPart = operation.slice(1).join(" "); // Join back everything after "add"
-    let operator = numbersPart
-      .split("+") // Split by "+"
-      .map((num) => num.trim()) // Remove extra spaces
-      .filter((num) => !isNaN(num) && num !== "") // Filter out invalid or empty strings
-      .map((num) => parseInt(num, 10)); // Convert to numbers
-
-    console.log("Specific Task:", specificTask);
-    console.log("Numbers Array:", operator);
-    let final_sum = 0;
-    for (let i = 0; i < operator.length; i++) {
-      final_sum += operator[i];
-    }
-    message_nexa.innerHTML = `SOFIA Voice :- Addition is ${final_sum}`;
-    readOut(`Addition is ${final_sum}`);
-  }
-  if (transcript.includes("multiply")) {
-    iscommandsreconize = true;
-    let output = 1;
-    let words = transcript.split(" ");
-    let numbers = words.filter((word) => !isNaN(word)).map(Number);
-    for (let i = 0; i < numbers.length; i++) {
-      output = output * numbers[i];
-    }
-    console.log(output);
-    message_nexa.innerHTML = `SOFIA Voice:- Mutipication is ${output}`;
-    readOut(`mutipication is ${output}`);
+  if (isListening) {
+    console.log("⚠️ Already listening");
+    return;
   }
 
-  if (
-    transcript.includes("sub") ||
-    transcript.includes("subtract") ||
-    transcript.includes("track")
-  ) {
-    iscommandsreconize = true;
-    let operation = transcript.split(" "); // Split the transcript into words
-    let specificTask = operation[0]; // Extract the first word as the specific task
-
-    // Extract the numbers part (everything after "add")
-    let numbersPart = operation.slice(1).join(" "); // Join back everything after "add"
-    let operator = numbersPart
-      .split("-") // Split by "+"
-      .map((num) => num.trim()) // Remove extra spaces
-      .filter((num) => !isNaN(num) && num !== "") // Filter out invalid or empty strings
-      .map((num) => parseInt(num, 10)); // Convert to numbers
-
-    console.log("Specific Task:", specificTask);
-    console.log("Numbers Array:", operator);
-    let final_sum = operator[0];
-    for (let i = 1; i < operator.length; i++) {
-      final_sum -= operator[i];
-    }
-    message_nexa.innerHTML = `SOFIA voice :- Subtraction is ${final_sum}`;
-    readOut(`Subtraction is ${final_sum}`);
-  }
-  if (transcript.includes("divide") || transcript.includes("/")) {
-    iscommandsreconize = true;
-    let check = true;
-    let Divide_output = 0;
-    let Divide_reminder = 0;
-
-    const arrya = transcript.split(" ");
-    const filerts = arrya.filter((word) => !isNaN(word)).map(Number);
-    for (let i = 1; i < filerts.length; i++) {
-      if (filerts[1] == 0) {
-        check = false;
-        readOut("Denominator can't be ZERO!");
-        message_nexa.innerHTML = `Denominator can't be ZERO!`;
-        console.log("Denominator cnat be ZERO");
-      }
-      if (filerts[0] < filerts[i]) {
-        check = false;
-        console.log("Numerator cant be small");
-        readOut("Numerator cant be small");
-        message_nexa.innerHTML = `Numerator cant be small !`;
-      } else {
-        Divide_output = (filerts[0] / filerts[1]).toFixed(1);
-        Divide_reminder = filerts[0] % filerts[1];
-      }
-    }
-    fractionalPart = Divide_reminder
-      ? `${Math.floor(Divide_output)} ${Divide_reminder}/${filerts[1]}`
-      : `${Math.floor(Divide_output)}`;
-
-    let message = `
-   Division Result:-
-     ${filerts[0]} ÷ ${filerts[1]} = ${Divide_output} ,
-     Remainder:- ${Divide_reminder},
-    Fractional-Form:- ${fractionalPart}
-    `;
-    if (check == true) {
-      readOut(message);
-      message_nexa.innerHTML = `SOFIA voice:- ${message}`;
-    }
-  }
-
-  if (transcript.includes("news")) {
-    iscommandsreconize = true;
-    const API_KEY = `e268f947d09e4a5397457e3dd8cc20f1`;
-    let apiLink = `https://newsapi.org/v2/top-headlines?sources=techcrunch&apiKey=${API_KEY}`;
-
-    const getnews = async () => {
-      let response = await fetch(apiLink);
-      let jsondata = await response.json();
-
-      if (jsondata.articles.length > 0) {
-        let messagenews_title = `Title: ${jsondata.articles[0].title}`;
-        let messagenews_description = `Description: ${jsondata.articles[0].description}`;
-        console.log(`${messagenews_title} ${messagenews_description}`);
-        readOut(messagenews_title);
-        readOut(messagenews_description);
-        message_nexa.innerHTML = `Sofia Voice:- ${messagenews_title} ${messagenews_description}`;
-      } else {
-        let errormessage = "No news found";
-        console.log(`${errormessage}`);
-        readOut(errormessage);
-        message_nexa.innerHTML = `Sofia Voice:-${errormessage}`;
-      }
-    };
-
-    getnews();
-  }
-
-  // defalut message
-  if (!iscommandsreconize) {
-    let errorMessage =
-      "Sorry, I didn't understand that command. Please provide a valid command. ";
-
-    message_nexa.innerHTML = `SOFIA voice :- ${errorMessage}`;
-    readOut(errorMessage);
-  }
-};
-
-// Nexa stop
-recognition.onend = function () {
-  alering_message.innerHTML = `SOFIA is deactivated`;
-  alering_message.style.color = "#FFA500";
-  console.log("SOFIA is deactivated");
-  let opacity = 1; // Initial opacity
-  const blinkInterval = setInterval(() => {
-    opacity = opacity === 1 ? 0.3 : 1; // Toggle between full and dim
-    alering_message.style.opacity = opacity;
-  }, 500); // Blinking speed (500ms)
-
-  // Optional: Stop blinking after 5 seconds
-  start_btn.addEventListener("click", function () {
-    clearInterval(blinkInterval);
-    alering_message.style.opacity = 1; // Reset opacity
-    alering_message.style.color = "white";
-  });
-};
-
-// Nexa Continuation for long until I press the stop button
-// recognition.continuous = true;
-
-// This helps to make button clickable and function execute
-const hole_body = document.body;
-start_btn.addEventListener("click", function () {
-  hole_body.style.border = "1px solid #FF9999"; // Light red border
-  start_btn.style.cursor = "not-allowed"; // Change cursor
   try {
     recognition.start();
   } catch (error) {
-    console.error("Speech recognition error:", error);
-  }
-});
-
-stop_btn.addEventListener("click", function () {
-  hole_body.style.border = "1px solid black";
-  start_btn.style.cursor = "default";
-  hole_body.style.border = "1px solid green";
-  hole_body.style.transition = "border 0.2s ease-in-out";
-  setTimeout(function () {
-    hole_body.style.border = "1px solid black";
-  }, 2000);
-
-  try {
-    recognition.stop();
-  } catch (error) {
-    console.error("Speech recognition error:", error);
-  }
-});
-
-// Nexa speech
-function readOut(message) {
-  const speech = new SpeechSynthesisUtterance();
-  const synth = window.speechSynthesis;
-
-  // Wait for voices to load
-  const loadVoices = () => {
-    const allVoices = synth.getVoices();
-    if (allVoices.length > 0) {
-      // Choose a specific voice (e.g., allVoices[1], or any preferred voice)
-      speech.voice =
-        allVoices.find((voice) => voice.name.includes("Google US English")) ||
-        allVoices[1];
-      speech.volume = 1; // Set volume (0.0 to 1.0)
-      speech.text = message;
-
-      // Speak the message
-      synth.speak(speech);
-      console.log("Speaking out");
-    }
-  };
-
-  if (synth.getVoices().length > 0) {
-    loadVoices(); // Voices are already available
-  } else {
-    // Wait for voices to load
-    synth.onvoiceschanged = loadVoices;
+    console.error("❌ Error starting recognition:", error);
+    showError("Failed to start listening. Please try again.");
   }
 }
 
-window.onload = function () {
-  // First call with an empty string
-  readOut(" ");
-  // setTimeout(function () {
-  //   readOut(`Hello ${userData.name} sir, welcome back! I am your assistant. How can I help you?`);
+function stopListening() {
+  console.log("⏹️ Stopping listening...");
 
-  // }, 1000);
-};
+  if (recognition && isListening) {
+    try {
+      recognition.stop();
+    } catch (error) {
+      console.error("❌ Error stopping recognition:", error);
+    }
+  }
+}
 
-speak_btn.addEventListener("click", function () {
-  message_nexa.innerHTML =
-    "SOFIA Voice :- Hello , I'm SOFIA , your voice assistant. How can I assist you?";
-  readOut("Hello , I'm SOFIA , your voice assistant. How can I assist you?");
+function testSpeech() {
+  console.log("🔊 Testing speech...");
+
+  const testMessage = userData
+    ? `Hello ${userData.name}! Speech synthesis is working perfectly.`
+    : "Hello! Speech synthesis is working perfectly.";
+
+  readOut(testMessage);
+}
+
+function clearAllData() {
+  console.log("🗑️ Clearing all data...");
+
+  if (
+    confirm("Are you sure you want to clear all data? This will reset SOFIA.")
+  ) {
+    try {
+      // Clear localStorage
+      localStorage.removeItem("sofia_user_data");
+
+      // Reset global variables
+      userData = null;
+      globalWeatherData = null;
+
+      // Clear messages
+      clearMessages();
+
+      // Reset weather display
+      updateWeatherDisplay(null);
+
+      // Show success message
+      const message = "All data cleared successfully!";
+      updateAssistantMessage(message);
+      readOut(message);
+
+      // Show setup modal again
+      setTimeout(() => {
+        showSetupModal();
+      }, 2000);
+    } catch (error) {
+      console.error("❌ Error clearing data:", error);
+      showError("Failed to clear data. Please try again.");
+    }
+  }
+}
+
+function clearMessages() {
+  console.log("🧹 Clearing messages...");
+
+  try {
+    updateUserMessage("Waiting for input...");
+    updateAssistantMessage("Ready to assist you");
+    updateAssistantStatus("I am your AI assistant. How can I help you today?");
+  } catch (error) {
+    console.error("❌ Error clearing messages:", error);
+  }
+}
+
+// ==================== VOICE COMMAND PROCESSING ====================
+
+function processVoiceCommand(transcript) {
+  console.log("🧠 Processing command:", transcript);
+
+  let responseMessage = "";
+  let commandRecognized = false;
+
+  try {
+    // ========== GREETING COMMANDS ==========
+    if (transcript.includes("hello") || transcript.includes("hi")) {
+      commandRecognized = true;
+      responseMessage = userData
+        ? `Hello ${userData.name}! I'm SOFIA, how can I assist you today?`
+        : "Hello! I'm SOFIA, your voice assistant. How can I help you?";
+    }
+
+    // ========== NAME COMMANDS ==========
+    else if (transcript.includes("your name")) {
+      commandRecognized = true;
+      responseMessage = "My name is SOFIA, your intelligent voice assistant.";
+    } else if (transcript.includes("my name")) {
+      commandRecognized = true;
+      responseMessage = userData
+        ? `Your name is ${userData.name}`
+        : "I don't have your name saved. Please set up your profile.";
+    }
+
+    // ========== CREATOR COMMANDS ==========
+    else if (
+      transcript.includes("created you") ||
+      transcript.includes("who made you")
+    ) {
+      commandRecognized = true;
+      responseMessage =
+        "Mohammad Kaif created me using JavaScript, HTML, and CSS with Speech Recognition API.";
+    }
+
+    // ========== TIME COMMANDS ==========
+    else if (transcript.includes("time")) {
+      commandRecognized = true;
+      const currentTime = new Date().toLocaleTimeString();
+      responseMessage = `The current time is ${currentTime}`;
+    }
+
+    // ========== DATE COMMANDS ==========
+    else if (transcript.includes("date") || transcript.includes("today")) {
+      commandRecognized = true;
+      const currentDate = new Date().toDateString();
+      responseMessage = `Today's date is ${currentDate}`;
+
+      //------------help command-----------------------/////
+    } else if (transcript.includes("help")) {
+      commandRecognized = true;
+
+      // Replace with your actual PDF URL (make sure it's viewable to everyone)
+      const pdfUrl = "https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/edit?usp=sharing";
+
+      // Open the PDF in a new tab
+      window.open(pdfUrl, "_blank");
+
+      responseMessage = "Opening the help document for you.";
+    }
+
+    // ========== WEATHER COMMANDS ==========
+    else if (transcript.includes("weather")) {
+      commandRecognized = true;
+      if (globalWeatherData) {
+        const temp = kelvinToCelsius(globalWeatherData.main.temp);
+        const feelsLike = kelvinToCelsius(globalWeatherData.main.feels_like);
+        responseMessage = `Today's weather in ${globalWeatherData.name}: ${globalWeatherData.weather[0].description}, temperature ${temp}°C, feels like ${feelsLike}°C.`;
+      } else {
+        responseMessage =
+          "Sorry, I cannot fetch the weather data at the moment. Please try again.";
+        // Try to get weather again
+        if (userData && userData.location) {
+          getWeatherData(userData.location);
+        }
+      }
+    }
+
+    // ========== WEBSITE OPENING COMMANDS ==========
+    else if (transcript.includes("open youtube")) {
+      commandRecognized = true;
+      responseMessage = "Opening YouTube for you.";
+      safeOpenWindow("https://www.youtube.com/");
+    } else if (transcript.includes("open google")) {
+      commandRecognized = true;
+      responseMessage = "Opening Google for you.";
+      safeOpenWindow("https://www.google.com/");
+    } else if (transcript.includes("open github")) {
+      commandRecognized = true;
+      responseMessage = "Opening GitHub for you.";
+      safeOpenWindow("https://github.com/");
+    } else if (transcript.includes("open linkedin")) {
+      commandRecognized = true;
+      responseMessage = "Opening LinkedIn for you.";
+      safeOpenWindow("https://www.linkedin.com/");
+    } else if (transcript.includes("open gmail")) {
+      commandRecognized = true;
+      responseMessage = "Opening Gmail for you.";
+      safeOpenWindow("https://mail.google.com/");
+    }
+
+    // ========== SEARCH COMMANDS ==========
+    else if (transcript.includes("search for")) {
+      commandRecognized = true;
+      const searchQuery = transcript.replace("search for", "").trim();
+      if (searchQuery) {
+        responseMessage = `Searching for ${searchQuery}`;
+        safeOpenWindow(
+          `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
+        );
+      } else {
+        responseMessage = "Please specify what you want to search for.";
+      }
+    }
+
+    // ========== MATH COMMANDS ==========
+    else if (transcript.includes("add") || transcript.includes("plus")) {
+      commandRecognized = true;
+      responseMessage = performAddition(transcript);
+    } else if (
+      transcript.includes("subtract") ||
+      transcript.includes("minus")
+    ) {
+      commandRecognized = true;
+      responseMessage = performSubtraction(transcript);
+    } else if (transcript.includes("multiply")) {
+      commandRecognized = true;
+      responseMessage = performMultiplication(transcript);
+    } else if (transcript.includes("divide")) {
+      commandRecognized = true;
+      responseMessage = performDivision(transcript);
+    }
+
+    // ========== ENTERTAINMENT COMMANDS ==========
+    else if (transcript.includes("joke")) {
+      commandRecognized = true;
+      getRandomJoke();
+      return; // Exit early as joke function handles response
+    }
+
+    // ========== DEFAULT RESPONSE ==========
+    if (!commandRecognized) {
+      responseMessage =
+        'Sorry, I didn\'t understand that command. Try saying "Hello", "What\'s the time?", or "Open Google".';
+    }
+
+    // Update UI and speak response
+    updateAssistantMessage(responseMessage);
+    readOut(responseMessage);
+
+    console.log("✅ Command processed:", responseMessage);
+  } catch (error) {
+    console.error("❌ Error processing voice command:", error);
+    const errorMsg = "Sorry, there was an error processing your command.";
+    updateAssistantMessage(errorMsg);
+    readOut(errorMsg);
+  }
+}
+
+// ==================== MATH FUNCTIONS ====================
+
+function extractNumbers(text) {
+  // Find all numbers in the text
+  const matches = text.match(/\d+\.?\d*/g);
+  return matches ? matches.map(Number) : [];
+}
+
+function performAddition(transcript) {
+  console.log("➕ Performing addition...");
+
+  try {
+    const numbers = extractNumbers(transcript);
+    if (numbers.length < 2) {
+      return "Please provide at least two numbers to add.";
+    }
+
+    const result = numbers.reduce((sum, num) => sum + num, 0);
+    return `${numbers.join(" plus ")} equals ${result}`;
+  } catch (error) {
+    console.error("❌ Error in addition:", error);
+    return "Sorry, I couldn't perform that calculation.";
+  }
+}
+
+function performSubtraction(transcript) {
+  console.log("➖ Performing subtraction...");
+
+  try {
+    const numbers = extractNumbers(transcript);
+    if (numbers.length < 2) {
+      return "Please provide at least two numbers to subtract.";
+    }
+
+    let result = numbers[0];
+    for (let i = 1; i < numbers.length; i++) {
+      result -= numbers[i];
+    }
+
+    return `${numbers[0]} minus ${numbers
+      .slice(1)
+      .join(" minus ")} equals ${result}`;
+  } catch (error) {
+    console.error("❌ Error in subtraction:", error);
+    return "Sorry, I couldn't perform that calculation.";
+  }
+}
+
+function performMultiplication(transcript) {
+  console.log("✖️ Performing multiplication...");
+
+  try {
+    const numbers = extractNumbers(transcript);
+    if (numbers.length < 2) {
+      return "Please provide at least two numbers to multiply.";
+    }
+
+    const result = numbers.reduce((product, num) => product * num, 1);
+    return `${numbers.join(" times ")} equals ${result}`;
+  } catch (error) {
+    console.error("❌ Error in multiplication:", error);
+    return "Sorry, I couldn't perform that calculation.";
+  }
+}
+
+function performDivision(transcript) {
+  console.log("➗ Performing division...");
+
+  try {
+    const numbers = extractNumbers(transcript);
+    if (numbers.length < 2) {
+      return "Please provide at least two numbers to divide.";
+    }
+
+    if (numbers[1] === 0) {
+      return "Cannot divide by zero!";
+    }
+
+    const result = (numbers[0] / numbers[1]).toFixed(2);
+    return `${numbers[0]} divided by ${numbers[1]} equals ${result}`;
+  } catch (error) {
+    console.error("❌ Error in division:", error);
+    return "Sorry, I couldn't perform that calculation.";
+  }
+}
+
+// ==================== API FUNCTIONS ====================
+
+async function getRandomJoke() {
+  console.log("😄 Getting a joke...");
+
+  try {
+    updateAssistantMessage("Let me find a joke for you...");
+
+    const response = await fetch(
+      "https://official-joke-api.appspot.com/random_joke"
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch joke");
+    }
+
+    const joke = await response.json();
+    const jokeText = `${joke.setup} ${joke.punchline}`;
+
+    updateAssistantMessage(jokeText);
+    readOut(jokeText);
+
+    // Add a laugh after the joke
+    setTimeout(() => {
+      readOut("That was funny!");
+    }, 3000);
+  } catch (error) {
+    console.error("❌ Error getting joke:", error);
+    const errorMessage =
+      "Sorry, I couldn't get a joke right now. Please try again later.";
+    updateAssistantMessage(errorMessage);
+    readOut(errorMessage);
+  }
+}
+
+async function getWeatherData(location) {
+  console.log("🌤️ Getting weather data for:", location);
+
+  try {
+    // Using a free weather API that works with HTTPS
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=demo&units=metric`
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      globalWeatherData = data;
+      updateWeatherDisplay(data);
+      console.log("✅ Weather data loaded successfully");
+    } else {
+      throw new Error("Weather data not found");
+    }
+  } catch (error) {
+    console.error("❌ Error fetching weather:", error);
+
+    // Create dummy weather data for demo
+    const dummyData = {
+      name: location,
+      sys: { country: "Demo" },
+      main: {
+        temp: 22,
+        feels_like: 25,
+        temp_min: 18,
+        temp_max: 28,
+        humidity: 65,
+      },
+      weather: [
+        {
+          main: "Clear",
+          description: "clear sky",
+        },
+      ],
+    };
+
+    globalWeatherData = dummyData;
+    updateWeatherDisplay(dummyData);
+    console.log("⚠️ Using demo weather data");
+  }
+}
+
+function updateWeatherDisplay(data) {
+  try {
+    if (data && elements.location) {
+      // Update weather display elements
+      if (elements.location) elements.location.textContent = data.name;
+      if (elements.country) elements.country.textContent = data.sys.country;
+      if (elements.weatherMain)
+        elements.weatherMain.textContent = data.weather[0].main;
+      if (elements.weatherDescription)
+        elements.weatherDescription.textContent = data.weather[0].description;
+      if (elements.temperature)
+        elements.temperature.textContent = `${Math.round(data.main.temp)}°C`;
+      if (elements.feelsLike)
+        elements.feelsLike.textContent = `${Math.round(
+          data.main.feels_like
+        )}°C`;
+      if (elements.minMaxTemp)
+        elements.minMaxTemp.textContent = `${Math.round(
+          data.main.temp_min
+        )}°C / ${Math.round(data.main.temp_max)}°C`;
+
+      console.log("✅ Weather display updated");
+    } else {
+      // Show error state
+      if (elements.location)
+        elements.location.textContent = "Location not found";
+      if (elements.country) elements.country.textContent = "--";
+      if (elements.weatherMain) elements.weatherMain.textContent = "--";
+      if (elements.weatherDescription)
+        elements.weatherDescription.textContent = "--";
+      if (elements.temperature) elements.temperature.textContent = "--°C";
+      if (elements.feelsLike) elements.feelsLike.textContent = "--°C";
+      if (elements.minMaxTemp) elements.minMaxTemp.textContent = "--°C / --°C";
+
+      console.log("❌ Weather display shows error state");
+    }
+  } catch (error) {
+    console.error("❌ Error updating weather display:", error);
+  }
+}
+
+function kelvinToCelsius(kelvin) {
+  // Convert temperature from Kelvin to Celsius
+  return Math.round(kelvin - 273.15);
+}
+
+// ==================== TEXT-TO-SPEECH FUNCTION ====================
+
+function readOut(message) {
+  console.log("🔊 Speaking:", message);
+
+  try {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create speech utterance
+    const speech = new SpeechSynthesisUtterance(message);
+    speech.lang = "en-US";
+    speech.volume = 1;
+    speech.rate = 0.9;
+    speech.pitch = 1;
+
+    // Set voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(
+      (voice) =>
+        voice.name.includes("Google") ||
+        voice.name.includes("Microsoft") ||
+        voice.lang === "en-US"
+    );
+
+    if (preferredVoice) {
+      speech.voice = preferredVoice;
+    }
+
+    // Update speech status
+    updateSystemStatus("speech-status", "Speaking", "active");
+
+    // Handle speech events
+    speech.onstart = () => {
+      updateSystemStatus("speech-status", "Speaking", "active");
+    };
+
+    speech.onend = () => {
+      updateSystemStatus("speech-status", "Ready", "success");
+    };
+
+    speech.onerror = (error) => {
+      console.error("❌ Speech error:", error);
+      updateSystemStatus("speech-status", "Error", "error");
+    };
+
+    // Speak the message
+    window.speechSynthesis.speak(speech);
+  } catch (error) {
+    console.error("❌ Error in text-to-speech:", error);
+    updateSystemStatus("speech-status", "Error", "error");
+  }
+}
+
+function speakWelcomeMessage() {
+  console.log("👋 Speaking welcome message...");
+
+  const welcomeMsg = userData
+    ? `Welcome back, ${userData.name}! SOFIA is ready to assist you.`
+    : "Welcome to SOFIA! Please complete the setup to get started.";
+
+  // Delay welcome message to let page load
+  setTimeout(() => {
+    readOut(welcomeMsg);
+  }, 1000);
+}
+
+// ==================== UI UPDATE FUNCTIONS ====================
+
+function updateStatusMessage(message, type = "") {
+  try {
+    if (elements.statusMessage) {
+      elements.statusMessage.textContent = message;
+
+      // Remove all existing classes
+      elements.statusMessage.className = "status-message";
+
+      // Add new class if specified
+      if (type) {
+        elements.statusMessage.classList.add(type);
+      }
+    }
+
+    console.log("📢 Status updated:", message);
+  } catch (error) {
+    console.error("❌ Error updating status message:", error);
+  }
+}
+
+function updateUserMessage(message) {
+  try {
+    if (elements.userMessage) {
+      elements.userMessage.textContent = message;
+    }
+    console.log("👤 User message updated:", message);
+  } catch (error) {
+    console.error("❌ Error updating user message:", error);
+  }
+}
+
+function updateAssistantMessage(message) {
+  try {
+    if (elements.assistantMessage) {
+      elements.assistantMessage.textContent = message;
+    }
+    console.log("🤖 Assistant message updated:", message);
+  } catch (error) {
+    console.error("❌ Error updating assistant message:", error);
+  }
+}
+
+function updateAssistantStatus(message) {
+  try {
+    if (elements.assistantStatus) {
+      elements.assistantStatus.textContent = message;
+    }
+    console.log("📢 Assistant status updated:", message);
+  } catch (error) {
+    console.error("❌ Error updating assistant status:", error);
+  }
+}
+
+function updateSystemStatus(elementId, status, type = "success") {
+  try {
+    const element =
+      elements[elementId.replace("-", "").replace("status", "Status")];
+    if (element) {
+      element.textContent = status;
+
+      // Remove existing classes
+      element.className = "stat-value";
+
+      // Add status class
+      if (type === "error") {
+        element.classList.add("error");
+      } else if (type === "active") {
+        element.style.color = "#feca57";
+      } else {
+        element.style.color = "#22c55e";
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error updating system status:", error);
+  }
+}
+
+function showError(message) {
+  console.error("🚨 Showing error:", message);
+  updateStatusMessage(message, "error");
+  updateAssistantMessage(`Error: ${message}`);
+  readOut(message);
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+function safeOpenWindow(url) {
+  try {
+    window.open(url, "_blank");
+    console.log("🌐 Opened URL:", url);
+  } catch (error) {
+    console.error("❌ Error opening window:", error);
+    showError("Failed to open website. Please check your browser settings.");
+  }
+}
+
+function updateDateTime() {
+  console.log("🕒 Starting date/time updates...");
+
+  function update() {
+    try {
+      const now = new Date();
+
+      if (elements.timeDisplay) {
+        elements.timeDisplay.textContent = now.toLocaleTimeString();
+      }
+
+      if (elements.dateDisplay) {
+        elements.dateDisplay.textContent = now.toDateString();
+      }
+    } catch (error) {
+      console.error("❌ Error updating date/time:", error);
+    }
+  }
+
+  // Update immediately and then every second
+  update();
+  setInterval(update, 1000);
+}
+
+async function checkBattery() {
+  console.log("🔋 Checking battery status...");
+
+  try {
+    if ("getBattery" in navigator) {
+      const battery = await navigator.getBattery();
+      const level = Math.round(battery.level * 100);
+
+      if (elements.batteryLevel) {
+        elements.batteryLevel.textContent = `${level}%`;
+      }
+
+      console.log("✅ Battery level:", level + "%");
+    } else {
+      if (elements.batteryLevel) {
+        elements.batteryLevel.textContent = "N/A";
+      }
+      console.log("⚠️ Battery API not supported");
+    }
+  } catch (error) {
+    console.error("❌ Error checking battery:", error);
+    if (elements.batteryLevel) {
+      elements.batteryLevel.textContent = "Error";
+    }
+  }
+}
+
+function checkOnlineStatus() {
+  console.log("🌐 Checking online status...");
+
+  function updateOnlineStatus() {
+    try {
+      const isOnline = navigator.onLine;
+
+      if (elements.statusIndicator) {
+        elements.statusIndicator.className = isOnline
+          ? "status-indicator"
+          : "status-indicator offline";
+      }
+
+      if (elements.connectionStatus) {
+        elements.connectionStatus.textContent = isOnline ? "Online" : "Offline";
+      }
+
+      updateSystemStatus(
+        "api-status",
+        isOnline ? "Connected" : "Disconnected",
+        isOnline ? "success" : "error"
+      );
+
+      console.log("🌐 Online status:", isOnline ? "Online" : "Offline");
+    } catch (error) {
+      console.error("❌ Error updating online status:", error);
+    }
+  }
+
+  // Update immediately
+  updateOnlineStatus();
+
+  // Listen for online/offline events
+  window.addEventListener("online", updateOnlineStatus);
+  window.addEventListener("offline", updateOnlineStatus);
+}
+
+// ==================== ERROR HANDLING ====================
+
+window.addEventListener("error", function (event) {
+  console.error("🚨 Global error caught:", event.error);
+  showError(
+    "An unexpected error occurred. Please refresh the page if problems persist."
+  );
 });
 
-const clock = document.querySelector(".time");
-const r_date = document.querySelector(".date");
-r_date.innerHTML = `<h3>${new Date().toDateString()}</h3>`;
-setInterval(() => {
-  let date = new Date().toLocaleTimeString();
-  clock.innerHTML = `<h2>${date}</h2>`;
-}, 1000);
+window.addEventListener("unhandledrejection", function (event) {
+  console.error("🚨 Unhandled promise rejection:", event.reason);
+  showError("A network error occurred. Please check your connection.");
+});
 
-//clear data
-const stroge = document.querySelector("#local_stroge");
+// ==================== INITIALIZATION CHECK ====================
 
-stroge.addEventListener("click", function () {
-  let confirmation = confirm(
-    "Are you sure you want to clear the Local Storage?"
-  );
-  if (confirmation) {
-    readOut("Clearing the local storage");
+// Make sure everything loads properly
+window.addEventListener("load", function () {
+  console.log("✅ Page fully loaded");
 
-    localStorage.clear();
-    setTimeout(() => {
-      location.reload(); // Delays reload so UI changes are visible
-    }, 1000); // Small delay
-  } else {
-    readOut("Local storage was not cleared");
+  // Double-check critical elements exist
+  if (!document.getElementById("main-app")) {
+    console.error("❌ Critical elements missing");
+    document.body.innerHTML =
+      '<div style="color: white; text-align: center; padding: 50px;">Error: Page not loaded correctly. Please refresh.</div>';
   }
 });
+
+console.log("📄 SOFIA JavaScript loaded successfully!");

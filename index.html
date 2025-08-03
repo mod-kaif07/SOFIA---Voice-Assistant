@@ -3,99 +3,325 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Voice Assistant</title>
+    <title>SOFIA Voice Assistant</title>
     <link rel="stylesheet" href="voice.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Agu+Display&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <div class="time_date">
-      <div class="time"></div>
-      <div class="date"></div>
-      <div class="footer">
-        <p>Command </Command><a href="https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/edit?usp=sharing">Pdf</a></p>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo">SOFIA</div>
+        <div class="loading-text">Starting Voice Assistant...</div>
+        <div class="loading-spinner"></div>
       </div>
-      <div class="battery">Battery %</div>
-      <div class="online"></div>
     </div>
 
-    <div class="faceborder">
-      <div class="main">
-        <div class="sophis_googleassiat">
-          <h1>S O F I A</h1>
-          <div class="googleassist">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
+    <!-- Main Application -->
+    <div id="main-app" class="main-app hidden">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <div class="logo">SOFIA</div>
+          <div class="system-info">
+            <div class="info-item">
+              <span id="time-display" class="time-display"></span>
+            </div>
+            <div class="info-item">
+              <span id="date-display" class="date-display"></span>
+            </div>
+            <div class="info-item battery">
+              <span>Battery: </span>
+              <span id="battery-level" class="battery-level">--</span>
+            </div>
+            <div class="info-item online-status">
+              <span id="status-indicator" class="status-indicator"></span>
+              <span id="connection-status" class="connection-status"
+                >Checking...</span
+              >
+            </div>
           </div>
         </div>
-  
-        <h4>I am your Assistant, How can I help you?</h4>
-        <div class="buttons">
-          <button id="start">Start</button>
-          <button id="stop">Stop</button>
-          <button id="speak">Speak</button>
-          <button id="local_stroge">Clear Data</button>
-          <div class="alrting">................</div>
-        </div>
-       --------------------------------------------------------------------------------------------------------------------
-        <br />
-        <h2>Message</h2>
-        <div class="hole_message">
-          <div class="message_print">.......................</div>
-          <div class="nexavoice">.....................................</div>
+      </header>
+
+      <!-- Main Container -->
+      <div class="container">
+        <!-- Main Content -->
+        <main class="main-content">
+          <!-- SOFIA Section -->
+          <section class="sofia-section">
+            <h1 class="sofia-title">SOFIA</h1>
+            <p class="sofia-subtitle">
+              Smart Office & Field Intelligence Assistant
+            </p>
+
+            <!-- Voice Visualizer -->
+            <div class="voice-visualizer">
+              <div class="wave-container">
+                <div class="wave wave-1"></div>
+                <div class="wave wave-2"></div>
+                <div class="wave wave-3"></div>
+                <div class="wave wave-4"></div>
+                <div class="wave wave-5"></div>
+              </div>
+            </div>
+
+            <p id="assistant-status" class="assistant-message">
+              I am your AI assistant. How can I help you today?
+            </p>
+          </section>
+
+          <!-- Control Panel -->
+          <section class="control-panel">
+            <div class="control-buttons">
+              <button id="start-btn" class="btn btn-primary">
+                <span class="btn-icon">🎤</span>
+                Start Listening
+              </button>
+              <button id="stop-btn" class="btn btn-secondary">
+                <span class="btn-icon">⏹️</span>
+                Stop
+              </button>
+              <button id="speak-btn" class="btn btn-accent">
+                <span class="btn-icon">🔊</span>
+                Test Speech
+              </button>
+              <button id="clear-data-btn" class="btn btn-outline">
+                <span class="btn-icon">🗑️</span>
+                Clear Data
+              </button>
+            </div>
+
+            <div class="status-display">
+              <div class="status-indicator-text">
+                Status:
+                <span id="status-message" class="status-message">Ready</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Message Display -->
+          <section class="message-section">
+            <div class="message-container">
+              <div class="message-header">
+                <h3>Conversation</h3>
+                <div class="message-controls">
+                  <button id="clear-messages-btn" class="clear-messages">
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div class="messages">
+                <div class="message-box user-message">
+                  <div class="message-label">Your Voice:</div>
+                  <div id="user-message" class="message-content">
+                    Waiting for input...
+                  </div>
+                </div>
+
+                <div class="message-box assistant-message-box">
+                  <div class="message-label">SOFIA Response:</div>
+                  <div id="assistant-message" class="message-content">
+                    Ready to assist you
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Commands Reference -->
+          <section class="commands-section">
+            <div class="commands-container">
+              <h3>Quick Commands</h3>
+              <div class="commands-grid">
+                <div class="command-item">
+                  <span class="command-text">"Hello"</span>
+                  <span class="command-desc">Greet SOFIA</span>
+                </div>
+                <div class="command-item">
+                  <span class="command-text">"What's the time?"</span>
+                  <span class="command-desc">Get current time</span>
+                </div>
+                <div class="command-item">
+                  <span class="command-text">"Weather today"</span>
+                  <span class="command-desc">Weather info</span>
+                </div>
+                <div class="command-item">
+                  <span class="command-text">"Open YouTube"</span>
+                  <span class="command-desc">Open websites</span>
+                </div>
+                <div class="command-item">
+                  <span class="command-text">"Tell me a joke"</span>
+                  <span class="command-desc">Get a random joke</span>
+                </div>
+                <div class="command-item">
+                  <span class="command-text">"Add 5 and 3"</span>
+                  <span class="command-desc">Simple math</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <!-- Weather Widget -->
+          <div class="widget weather-widget">
+            <h3 class="widget-title">Weather Information</h3>
+            <div class="weather-content">
+              <div class="weather-item">
+                <span class="weather-label">Location:</span>
+                <span id="location">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Country:</span>
+                <span id="country">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Weather:</span>
+                <span id="weather-main">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Description:</span>
+                <span id="weather-description">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Temperature:</span>
+                <span id="temperature">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Feels Like:</span>
+                <span id="feels-like">--</span>
+              </div>
+              <div class="weather-item">
+                <span class="weather-label">Min/Max:</span>
+                <span id="min-max-temp">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Stats Widget -->
+          <div class="widget system-widget">
+            <h3 class="widget-title">System Status</h3>
+            <div class="system-stats">
+              <div class="stat-item">
+                <span class="stat-label">Voice Recognition:</span>
+                <span id="voice-status" class="stat-value">Ready</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Speech Synthesis:</span>
+                <span id="speech-status" class="stat-value">Ready</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Connection:</span>
+                <span id="api-status" class="stat-value">Connected</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Setup Modal -->
+      <div id="setup-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+          <h2>Welcome to SOFIA</h2>
+          <p>Please provide your details to personalize your experience</p>
+
+          <form id="setup-form" class="setup-form">
+            <div class="form-group">
+              <label for="user-name">Your Name</label>
+              <input
+                type="text"
+                id="user-name"
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="user-location">Your Location</label>
+              <input
+                type="text"
+                id="user-location"
+                placeholder="Enter your city"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="user-github">GitHub URL (Optional)</label>
+              <input
+                type="url"
+                id="user-github"
+                placeholder="Enter your GitHub URL"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="user-linkedin">LinkedIn URL (Optional)</label>
+              <input
+                type="url"
+                id="user-linkedin"
+                placeholder="Enter your LinkedIn URL"
+              />
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              Complete Setup
+            </button>
+          </form>
         </div>
       </div>
-    </div>
 
-    <div class="jarvi_setup_in_middle">
-      <h3>Fill the details</h3>
-      <label for="Your Name"></label>
-      <input type="text" placeholder="Enter your name" />
-      <br />
-      <label for="Your Location"></label>
-      <input type="text" placeholder="Enter your location" />
-      <br />
-      <label for="github"></label>
-      <input type="text" placeholder="Enter your Github URL" />
-      <br />
-      <label for="LinkedIn"></label>
-      <input type="text" placeholder="Enter your LinkedIn URL" />
-      <br />
-      <button id="sub_btn">Submit</button>
-    </div>
+      <!-- Overlay for modal -->
+      <div id="overlay" class="overlay hidden"></div>
 
-    <div class="temp">
-      <p id="location"></p>
-      <p id="country"></p>
-      <p id="weatherT"></p>
-      <p id="weatherD"></p>
-      <p id="oTemp"></p>
-      <p id="feelLike"></p>
-      <p id="minT"></p>
-      <p id="maxT"></p>
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-content">
+          <div class="footer-text">
+            © 2025 Mohammad Kaif. All rights reserved.
+          </div>
+          <div class="social-links">
+            <a
+              href="https://github.com/mod-kaif07"
+              target="_blank"
+              class="social-link"
+            >
+              <span>GitHub</span>
+            </a>
+            <a
+              href="https://www.linkedin.com/in/mohammad-kaif-9a0bb6284/"
+              target="_blank"
+              class="social-link"
+            >
+              <span>LinkedIn</span>
+            </a>
+            <a
+              href="https://www.instagram.com/kaif_07official/"
+              target="_blank"
+              class="social-link"
+            >
+              <span>Instagram</span>
+            </a>
+            <a
+              href="https://docs.google.com/document/d/1eKjCMQC7GhpHI_R3s6fpjUzxooZRtVozdKstDiY3oes/edit?usp=sharing"
+              target="_blank"
+              class="pdf link"
+            >
+              <span> Command </span>
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
 
     <script src="voice.js"></script>
-    <footer>
-      <div>© 2025 Mohammad Kaif. All rights reserved.</div>
-      <div class="social-icons">
-          <a href="https://github.com/mod-kaif07" target="_blank">
-              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub">
-          </a>
-          <a href="https://www.linkedin.com/in/mohammad-kaif-9a0bb6284/" target="_blank">
-              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="LinkedIn">
-          </a>
-          <a href="https://www.instagram.com/kaif_07official/" target="_blank">
-              <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">
-          </a>
-      </div>
-  </footer>
-  
   </body>
- </html>
+</html>
